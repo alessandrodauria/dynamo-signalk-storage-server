@@ -215,6 +215,155 @@ class GPX(Resource):
             conn.close()
 
         return Response(ET.tostring(gpx), mimetype='text/xml')
+    
+
+
+import json
+
+@api.route('/geojson/<self_id>')
+class GeoJSON(Resource):
+    def get(self, self_id):
+        query = "SELECT * FROM public.navigation_position WHERE context='" + self_id + "' "
+        
+        conf = get_conf()
+
+        connection_string = conf["connection_string"]
+        engine = create_engine(connection_string, echo=False)
+        conn = engine.connect()
+
+        start = request.args.get('start')
+        end = request.args.get('end')
+        hours = request.args.get('hours')
+        minutes = request.args.get('minutes')
+        seconds = request.args.get('seconds')
+
+        try:
+            if start is not None and end is not None:
+                startTime = datetime.strptime(start, '%Y%m%dZ%H%M%S')
+                endTime = datetime.strptime(end, '%Y%m%dZ%H%M%S')
+                query += f"AND timestamp >= '{startTime}' AND timestamp <= '{endTime}' ".format(startTime, endTime)
+
+            elif start is not None and (hours is not None or minutes is not None or seconds is not None):
+                startTime = datetime.strptime(start, '%Y%m%dZ%H%M%S')
+                endTime = startTime + timedelta(hours=int(hours or 0), minutes=int(minutes or 0), seconds=int(seconds or 0))
+                query += f"AND timestamp >= '{startTime}' AND timestamp <= '{endTime}' ".format(startTime, endTime)
+
+            elif end is not None and (hours is not None or minutes is not None or seconds is not None):
+                endTime = datetime.strptime(end, '%Y%m%dZ%H%M%S')
+                startTime = endTime - timedelta(hours=int(hours or 0), minutes=int(minutes or 0), seconds=int(seconds or 0))
+                query += f"AND timestamp >= '{startTime}' AND timestamp <= '{endTime}' ".format(startTime, endTime)
+
+            else:
+                query += "AND timestamp >= NOW() - INTERVAL '15 minutes' "
+        except Exception as e:
+            query += "AND timestamp >= NOW() - INTERVAL '15 minutes' "
+
+        query += "ORDER BY timestamp ASC;"
+
+        try:
+            result = conn.execute(query)
+
+            # Creazione del dizionario GeoJSON
+            geojson = {
+                "type": "FeatureCollection",
+                "features": []
+            }
+            for row in result:
+                feature = {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [row[4], row[5]]
+                    },
+                    "properties": {
+                        "time": str(row[1])
+                    }
+                }
+                geojson["features"].append(feature)
+
+            conn.close()
+        except Exception as e:
+            conn.close()
+
+        # Restituzione del file GeoJSON come stringa JSON
+        return Response(json.dumps(geojson), mimetype='application/json')
+    
+
+
+""" converte il json in GeoJSON """
+
+@api.route('/geojsonconvert/<self_id>')
+class GeoJSON(Resource):
+    def get(self, self_id):
+        query = "SELECT * FROM public.navigation_position WHERE context='" + self_id + "' "
+
+        conf = get_conf()
+
+        connection_string = conf["connection_string"]
+        engine = create_engine(connection_string, echo=False)
+        conn = engine.connect()
+
+        start = request.args.get('start')
+        end = request.args.get('end')
+        hours = request.args.get('hours')
+        minutes = request.args.get('minutes')
+        seconds = request.args.get('seconds')
+
+        try:
+            if start is not None and end is not None:
+                startTime = datetime.strptime(start, '%Y%m%dZ%H%M%S')
+                endTime = datetime.strptime(end, '%Y%m%dZ%H%M%S')
+                query += f"AND timestamp >= '{startTime}' AND timestamp <= '{endTime}' ".format(startTime, endTime)
+
+            elif start is not None and (hours is not None or minutes is not None or seconds is not None):
+                startTime = datetime.strptime(start, '%Y%m%dZ%H%M%S')
+                endTime = startTime + timedelta(hours=int(hours or 0), minutes=int(minutes or 0), seconds=int(seconds or 0))
+                query += f"AND timestamp >= '{startTime}' AND timestamp <= '{endTime}' ".format(startTime, endTime)
+
+            elif end is not None and (hours is not None or minutes is not None or seconds is not None):
+                endTime = datetime.strptime(end, '%Y%m%dZ%H%M%S')
+                startTime = endTime - timedelta(hours=int(hours or 0), minutes=int(minutes or 0), seconds=int(seconds or 0))
+                query += f"AND timestamp >= '{startTime}' AND timestamp <= '{endTime}' ".format(startTime, endTime)
+
+            else:
+                query += "AND timestamp >= NOW() - INTERVAL '15 minutes' "
+        except Exception as e:
+            query += "AND timestamp >= NOW() - INTERVAL '15 minutes' "
+
+        query += "ORDER BY timestamp ASC;"
+
+        try:
+            result = conn.execute(query)
+
+            features = []
+            for row in result:
+                feature = {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [row[4], row[5]]
+                    },
+                    "properties": {
+                        "timestamp": str(row[1])
+                    }
+                }
+                features.append(feature)
+
+            geojson = {
+                "type": "FeatureCollection",
+                "features": features
+            }
+
+            conn.close()
+
+            return Response(json.dumps(geojson), mimetype='application/json')
+
+        except Exception as e:
+            conn.close()
+
+            return Response(json.dumps({"error": str(e)}), status=500, mimetype='application/json')
+
+
 
 from flask import send_from_directory
 

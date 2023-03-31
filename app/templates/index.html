@@ -229,6 +229,7 @@
       return style;
     }
   };
+
   
   // GeoJSON layer with a preview attribute
   var vectorSource = new ol.source.Vector({
@@ -327,7 +328,7 @@ var popup = new ol.Overlay.Popup ({
       zoom: 6,
       center: ol.proj.fromLonLat([23.506092, 60.045847]),
     }),
-    layers: [stamen, vector, vectorGEOJSON],
+    layers: [stamen, vector, vectorGEOJSON, vectorGPX],
     overlays: [popup]
   });
 

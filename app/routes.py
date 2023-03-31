@@ -14,6 +14,7 @@ from app import app, auth, get_conf, log, queues
 api = Api(app)
 
 
+
 @api.route('/publickey')
 class PublicKey(Resource):
     def get(self):
@@ -214,6 +215,12 @@ class GPX(Resource):
             conn.close()
 
         return Response(ET.tostring(gpx), mimetype='text/xml')
+
+from flask import send_from_directory
+
+@app.route('/geojson')
+def get_geojson():
+    return send_from_directory('static/lib/v7.2.2-package/ol-ext-master/examples/data', 'fond_guerre.geojson')
 
 
 @app.route('/map')

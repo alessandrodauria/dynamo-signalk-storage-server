@@ -8,11 +8,82 @@ from sqlalchemy import create_engine
 from werkzeug.datastructures import FileStorage
 from datetime import datetime, timedelta
 
+from werkzeug.security import generate_password_hash, check_password_hash
+from http import HTTPStatus
+from werkzeug.exceptions import Conflict, BadRequest
+
 from app import app, auth, get_conf, log, queues
 
 # Create the api object using restx
 api = Api(app)
+"""
+Create a new user
+       
+@api.route('/signup')
+class SignUp(Resource):
 
+    def post(self):
+       
+        data = request.get_json()
+
+        try:
+            new_user = User(
+                username = data.get('username'),
+                email = data.get('email'),
+                password_hash = generate_password_hash(data.get('password'))
+            )
+            new_user.save()
+            return new_user, HTTPStatus.CREATED
+
+        except Exception as e:
+            raise Conflict(f"User with email {data.get('email')} exists")
+
+""" 
+
+"""
+
+Generate a JWT 
+
+@api.route.route('/login')
+class Login(Resource):
+
+    def post(self):
+
+        data = request.get_json()
+
+        email = data.get('email')
+        password = data.get('password')
+
+        user=User.query.filter_by(email=email).first()
+
+        if(user is not None) and check_password_hash(user.password_hash,password):
+            access_token = create_access_token(identity = user.username)
+            refresh_token = create_refresh_token(identity = user.username)
+
+            response = {
+                'access_token': access_token,
+                'refresh_token':refresh_token
+            }
+
+            return response,HTTPStatus.OK
+
+        raise BadRequest("Invali username or password")
+
+"""
+"""
+Refresh a JWT 
+
+@api.route('/refresh')
+class Refresh(Resource):
+
+    @jwt_required(refresh=True)
+    def post(self):
+
+        username = get_jwt_identity()
+        access_token = create_access_token(identity=username)
+
+        return {'access_token':access_token }, HTTPStatus.OK
+"""
 
 
 @api.route('/publickey')
@@ -219,6 +290,8 @@ class GPX(Resource):
 
 
 import json
+
+""" prende il GeoJSON """
 
 @api.route('/geojson/<self_id>')
 class GeoJSON(Resource):
